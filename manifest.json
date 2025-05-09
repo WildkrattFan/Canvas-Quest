@@ -1,0 +1,19 @@
+{
+    "manifest_version": 3,
+    "name": "Canvas Quest",
+    "version": "1.0",
+    "permissions": ["activeTab", "scripting", "storage", "identity"],
+    "host_permissions": ["https://*/*"],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "content_scripts": [{
+      "matches": ["https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }]
+  }
+  
