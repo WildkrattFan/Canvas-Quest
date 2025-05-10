@@ -10,11 +10,37 @@ let shopBlock = null;
 let assignmentList = null;
 let coins = 0;
 let lastUpdate = null;
+let shopItems = [
+    {
+        name: "Item 1",
+        description: "Description for Item 1",
+        price: 10,
+        image: "https://via.placeholder.com/150",
+        id: 1
+    },
+    {
+        name: "Item 2",
+        description: "Description for Item 2",
+        price: 20,
+        image: "https://via.placeholder.com/150",
+        id: 2
+    },
+    {
+        name: "Item 3",
+        description: "Description for Item 3",
+        price: 30,
+        image: "https://via.placeholder.com/150",
+        id: 3
+    }
+];
+let purchasedItems = [];
 
 const states = {
     Assignments: "Assignments",
     Shop: "Shop"
 };
+
+const duckScript = document.createElement("script");
 
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -42,7 +68,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         sidebar.style.flexDirection = "column"; // Stack items vertically
         sidebar.style.alignItems = "center";
         sidebar.style.padding = "20px 0";
-        sidebar.style.zIndex = "1000";
+        sidebar.style.zIndex = "999";
         sidebar.style.fontSize = "16px"; // Font size for the sidebar
         sidebar.innerHTML = `
             <div style="margin-bottom: 20px; font-size: 18px; font-weight: bold;"><h1>Canvas Quest</h1></div>
@@ -117,7 +143,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div style="font-size: 14px; font-weight: bold; color: #fff;">${courseName}</div>
         <div style="font-size: 14px; color: #ddd;">${assignment.plannable.title}</div>
         <div style="font-size: 12px; color: #aaa;">Due: ${dueDate}</div>
-        <div style="font-size: 12px; color: #FFD700;">Days Left: ${assignment.days_left}</div>
+        <div style="font-size: 12px; color: #FFD700;">Coins Availabe: ${assignment.days_left}</div>
         <button style="
             margin-top: 10px;
             padding: 5px 10px;
@@ -157,6 +183,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         sidebar.appendChild(assignmentList);
 
+
+
+
+
+
         
         coins = await getLocally("coins");
         if (coins === null) {
@@ -174,6 +205,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         // Add padding to the body to prevent content from being covered
         document.body.style.paddingRight = "200px"; // Match the sidebar's width
+        createShopBlock();
+
+        duckScript.src = chrome.runtime.getURL("js/duck.js");
+        document.body.appendChild(duckScript);
 
 
     } else {
@@ -277,6 +312,7 @@ function shopButtonPressed() {
     if(sidebar){
         if(sidebar.contains(assignmentList)){
             sidebar.removeChild(assignmentList);
+            sidebar.appendChild(shopBlock);
         }
     }
     // Add your shop logic here
@@ -303,6 +339,20 @@ async function getLocally(key) {
     return value ? JSON.parse(value) : null;
 }
 
+async function purchaseItem(itemName, itemPrice, itemId) {
+    if (coins >= itemPrice) {
+        coins -= itemPrice;
+        purchasedItems.push(itemId);
+        // console.log("Purchased Items:", purchasedItems);
+        await storeLocally("coins", coins);
+        await storeLocally("purchasedItems", purchasedItems);
+        alert(`You have purchased ${itemName} for ${itemPrice} coins!`);
+        refreshShopBlock()
+    } else {
+        alert("You do not have enough coins to purchase this item.");
+    }
+}
+
 async function updateCoins(){
     let currentDate = new Date();
     let timeDiff = Math.abs(currentDate.getTime() - lastUpdate.getTime());
@@ -327,4 +377,67 @@ async function updateCoins(){
     lastUpdate = currentDate;
     await storeLocally("coins", coins);
     await storeLocally("lastUpdate", lastUpdate);
+}
+
+function createShopBlock(){
+        let currentCoints = coins;
+        shopBlock = document.createElement("div");
+        shopBlock.style.margin = "20px"; // Add some space from the top
+        shopBlock.style.width = "90%"; // Width of the list
+        shopBlock.style.overflowY = "auto"; // Enable vertical scrolling
+        shopBlock.style.maxHeight = "80%"; // Limit the height of the list
+        shopBlock.style.padding = "10px";
+        shopBlock.style.backgroundColor = "#444"; // Background color for the list
+        shopBlock.style.borderRadius = "5px"; // Rounded corners
+        shopBlock.style.boxShadow = "0 0 10px rgba(0, 0, 0, 0.5)"; // Shadow effect
+        shopBlock.innerHTML = `
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; display: flex; flex-direction: row; justify-content: space-between;"><h2>Shop</h2>
+        <h2 style="color: #FFD700;">Coins: ${currentCoints}</h2>
+        </div>
+        <div style="font-size: 14px; color: #aaa;">Available Items:</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            ${shopItems.map(item => `
+                <div style="display: flex; flex-direction: row; align-items: center; background-color: #555; padding: 10px; border-radius: 5px;">
+                    <img src="${item.image}" alt="${item.name}" style="width: 50px; height: 50px; margin-right: 10px;">
+                    <div style="flex-grow: 1;">
+                        <div style="font-size: 14px; font-weight: bold;">${item.name}</div>
+                        <div style="font-size: 12px;">${item.description}</div>
+                        <div style="font-size: 12px; color: #FFD700;">Price: ${item.price} coins</div>
+                    </div>
+                    <button class="purchase-button" data-item-name="${item.name}" data-item-price="${item.price}" data-item-id="${item.id}" style="
+                        background-color: #4CAF50;
+                        color: white;
+                        border: none;
+                        padding: 5px 10px;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    ">Purchase</button>
+                </div>
+            `).join("")}
+        </div>
+        
+        `;
+
+        shopBlock.addEventListener("click", async (event) => {
+            if (event.target.classList.contains("purchase-button")) {
+                const itemName = event.target.getAttribute("data-item-name");
+                const itemPrice = parseInt(event.target.getAttribute("data-item-price"));
+                const itemId = event.target.getAttribute("data-item-id");
+                console.log(`Item ID: ${itemId}`);
+                await purchaseItem(itemName, itemPrice, itemId);
+            }
+        });
+
+        // Add the total assignments count
+
+}
+
+function refreshShopBlock(){
+    if(sidebar){
+        if(sidebar.contains(shopBlock)){
+            sidebar.removeChild(shopBlock);
+            createShopBlock();
+            sidebar.appendChild(shopBlock);
+        }
+    }
 }
