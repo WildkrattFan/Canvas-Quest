@@ -8,6 +8,8 @@ let sidebar = null;
 let assignmentBlock = null;
 let shopBlock = null;
 let assignmentList = null;
+let coins = 0;
+let lastUpdate = null;
 
 const states = {
     Assignments: "Assignments",
@@ -156,9 +158,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         sidebar.appendChild(assignmentList);
 
         
-
+        coins = await getLocally("coins");
+        if (coins === null) {
+            coins = 0;
+            await storeLocally("coins", coins);
+        }
+        let lastUpdateUnformatted = await getLocally("lastUpdate"); // Set to a week ago
+        if (lastUpdateUnformatted === null) {
+            lastUpdate = new Date();
+            await storeLocally("lastUpdate", lastUpdate);
+            updateCoins();
+        } else {
+            lastUpdate = new Date(lastUpdateUnformatted);
+            updateCoins();
+        }
         // Add padding to the body to prevent content from being covered
         document.body.style.paddingRight = "200px"; // Match the sidebar's width
+
+
     } else {
         console.error("Document body is not available.");
     }
@@ -275,4 +292,39 @@ function assignmentsButtonPressed() {
         }
     }
     // Add your assignments logic here
+}
+
+
+async function storeLocally(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+}
+async function getLocally(key) {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+}
+
+async function updateCoins(){
+    let currentDate = new Date();
+    let timeDiff = Math.abs(currentDate.getTime() - lastUpdate.getTime());
+    let diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    let assignments = await getAllAssignments();
+    let assignmentsUpdatedSinceLastUpdate = assignments.filter(assignment => {
+        let updatedDate = new Date(assignment.plannable.updated_at);
+        return updatedDate >= lastUpdate && assignment.submissions.submitted == true;
+    });
+    
+    let coinsEarned = 0;
+
+    assignmentsUpdatedSinceLastUpdate.forEach(assignment => {
+        let dueDate = new Date(assignment.plannable_date);
+        let submittedDate = new Date(assignment.plannable.updated_at);
+        let timeDifference = Math.abs(submittedDate - dueDate);
+        let daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+        console.log("Days Difference:", daysDifference);
+        coinsEarned += daysDifference;
+    });
+    coins += coinsEarned;
+    lastUpdate = currentDate;
+    await storeLocally("coins", coins);
+    await storeLocally("lastUpdate", lastUpdate);
 }
