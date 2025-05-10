@@ -11,8 +11,8 @@ let assignmentList = null;
 
 const states = {
     Assignments: "Assignments",
-    Shop: "Shop",
-}
+    Shop: "Shop"
+};
 
 document.addEventListener("DOMContentLoaded", async () => {
     try {
@@ -112,13 +112,35 @@ document.addEventListener("DOMContentLoaded", async () => {
             assignmentBlock.style.boxShadow = "0 0 5px rgba(0, 0, 0, 0.3)"; // Shadow effect
 
             assignmentBlock.innerHTML = `
-                <div style="font-size: 14px; font-weight: bold; color: #fff;">${courseName}</div>
-                <div style="font-size: 14px; color: #ddd;">${assignment.plannable.title}</div>
-                <div style="font-size: 12px; color: #aaa;">Due: ${dueDate}</div>
-                <div style="font-size: 12px; color: #FFD700;">Points Available: ${assignment.days_left}</div>
-            `;
+        <div style="font-size: 14px; font-weight: bold; color: #fff;">${courseName}</div>
+        <div style="font-size: 14px; color: #ddd;">${assignment.plannable.title}</div>
+        <div style="font-size: 12px; color: #aaa;">Due: ${dueDate}</div>
+        <div style="font-size: 12px; color: #FFD700;">Days Left: ${assignment.days_left}</div>
+        <button style="
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        " class="mark-completed" data-points="${assignment.days_left} ">Mark as Completed</button>
+    `;
 
             assignmentList.appendChild(assignmentBlock);
+        });
+
+        assignmentList.addEventListener("click", (event) => {
+            if (event.target.classList.contains("mark-completed")) {
+                const points = event.target.getAttribute("data-points");
+                // Handle the mark as completed action here
+                console.log(`Assignment marked as completed. Points: ${points}`);
+                // Optionally, remove the assignment block from the list
+                const assignmentBlock = event.target.closest("div");
+                if (assignmentBlock) {
+                    assignmentList.removeChild(assignmentBlock);
+                }
+            }
         });
 
         // Add the total assignments count
@@ -132,6 +154,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Add the list to the sidebar
 
         sidebar.appendChild(assignmentList);
+
+        
 
         // Add padding to the body to prevent content from being covered
         document.body.style.paddingRight = "200px"; // Match the sidebar's width
